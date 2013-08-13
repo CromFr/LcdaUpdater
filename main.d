@@ -14,7 +14,7 @@ string DIR_MODULE;
 string DIR_UNKNOWN;
 
 
-string GetFileDestination(string sFilePath, out string sErrors)
+string GetFileDestination(string sFilePath, ref string sErrors)
 {
     static auto rgxFile = regex(r"^(.*[/\\])*(.*)(\.([a-zA-Z0-9]+))$");
 
@@ -124,13 +124,13 @@ int main(string[] args)
 
 string CompleteInstall(ref GitRepo gr)
 {
-    InitDirs(true);
-
     string sErrors;
     if(gr.Upgrade())
     {
         writeln("Appuyez sur [ENTREE] pour commencer l'installation...");
         readln();
+
+        InitDirs(true);
 
         //List files in dir
         foreach(DirEntry entry; dirEntries(DIR_REPO, SpanMode.shallow))
@@ -163,8 +163,6 @@ string IntelligentInstall(ref GitRepo gr)
 
     string sFromCommit = cast(string)(read(DIR_MODULE~"/InstalledCommit.txt"));
 
-    InitDirs(false);
-
     string sErrors;
     if(gr.Upgrade())
     {
@@ -174,6 +172,9 @@ string IntelligentInstall(ref GitRepo gr)
 
         writeln("Appuyez sur [ENTREE] pour commencer l'installation...");
         readln();
+
+        InitDirs(false);
+
         foreach(diff; diffs)
         {
             string sDestination = GetFileDestination(diff.file, sErrors);
