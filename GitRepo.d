@@ -4,14 +4,14 @@ import std.file;
 import std.string;
 import std.regex;
 
-immutable string GIT_PATH="C:\\Program Files (x86)\\Git\\cmd\\";
 
 class GitRepo
 {
 public:
-    this(string sRepositoryPath)
+    this(string sRepositoryPath, string sGitPath)
     {
         m_sDir=sRepositoryPath;
+        m_sGitPath = sGitPath;
     }
 
     string GetLatestOriginCommitHash()
@@ -84,6 +84,7 @@ public:
 
 private:
     string m_sDir;
+    string m_sGitPath;
 
     auto ExecuteGitCommand(string sCmd, bool bSilent=false)
     {
@@ -92,7 +93,7 @@ private:
 
         writeln(">",sCmd);
         string[] command = split(sCmd);
-        command[0] = GIT_PATH~command[0];
+        command[0] = m_sGitPath~command[0];
         auto cmdout = execute(command);
 
         chdir(sDir);

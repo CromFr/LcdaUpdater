@@ -8,15 +8,13 @@ import std.string;
 import GitRepo;
 import INIReader;
 
-immutable string DIR_OVERRIDE = "Override/Lcda";
-immutable string DIR_UNKNOWN = "Override/Unknown";
-immutable string DIR_MODULE = "Modules/Lcda";
-immutable string DIR_REPO = "LcdaDev";
+string DIR_REPO;
+string DIR_OVERRIDE ;
+string DIR_MODULE;
+string DIR_UNKNOWN;
 
 
-
-
-string GetFileDestination(string sFilePath)
+string GetFileDestination(string sFilePath, out string sErrors)
 {
     static auto rgxFile = regex(r"^(.*[/\\])*(.*)(\.([a-zA-Z0-9]+))$");
 
@@ -39,12 +37,12 @@ string GetFileDestination(string sFilePath)
                 return "";
 
             default:
-                writeln("Destination du fichier ",sFilePath," inconnue ! Le fichier à été placé dans ",DIR_UNKNOWN," pour plus de sûreté");
+                sErrors~="Destination du fichier '"~sFilePath~"'' inconnue ! Le fichier à été placé dans "~DIR_UNKNOWN~" pour plus de sûreté\n";
                 return DIR_UNKNOWN~"/"~sFileName~"."~sExtension;
         }
     }
     else
-        writeln("Format du fichier inconnu : ",sFilePath);
+        sErrors~="Format du fichier inconnu : '"~sFilePath~"'. Le fichier à été placé dans "~DIR_UNKNOWN~" pour plus de sûreté\n";
 
     return DIR_UNKNOWN;
 
@@ -69,12 +67,13 @@ void InitDirs(bool bClear)
 
 int main(string[] args)
 {
-    INIReader ir = new INIReader("test.ini");
-    ir.Print();
-    return 0;
+    INIReader ir = new INIReader("LcdaUpdater.ini");
+    DIR_REPO = ir.Get("Path", "LcdaDev");
+    DIR_OVERRIDE = ir.Get("Path", "Override");
+    DIR_MODULE = ir.Get("Path", "Module");
+    DIR_UNKNOWN = ir.Get("Path", "Unknown");
 
-
-    GitRepo gr = new GitRepo(DIR_REPO);
+    GitRepo gr = new GitRepo(DIR_REPO, ir.Get("Path", "Git"));
 
     writeln("Ce script va permettre de stripper et mettre en production le module afin de procéder à une mise à jour du module.");
     writeln("ATTENTION : Si les HAK ou le TLK ont été modifiés, il faudra les mettre à jour manuellement !");
@@ -108,12 +107,17 @@ int main(string[] args)
         sAns = readln();
     }while(sAns[0]!='c' && sAns[0]!='i');
 
+    string sErrs;
     if(sAns[0]=='c')
-        CompleteInstall(gr);
+        sErrs = CompleteInstall(gr);
     else
-        IntelligentInstall(gr);
+        sErrs = IntelligentInstall(gr);
 
-
+    if(sErrs!="")
+    {
+        writeln("Quelque chose ne s'est pas passé correctement durant l'installation des fichiers :");
+        writeln(sErrs);
+    }
 	return 0;
 }
 
@@ -133,7 +137,7 @@ string CompleteInstall(ref GitRepo gr)
         {
             if(entry.isFile)
             {
-                string sDestination = GetFileDestination(entry.name);
+                string sDestination = GetFileDestination(entry.name, sErrors);
                 if(sDestination!="")
                 {
                     writeln("ADDED   : ",entry.name," --> ",sDestination);
@@ -172,7 +176,7 @@ string IntelligentInstall(ref GitRepo gr)
         readln();
         foreach(diff; diffs)
         {
-            string sDestination = GetFileDestination(diff.file);
+            string sDestination = GetFileDestination(diff.file, sErrors);
             if(sDestination!="")
             {
                 if(diff.type=='M')
