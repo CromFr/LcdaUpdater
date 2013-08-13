@@ -6,6 +6,7 @@ import std.regex;
 import std.string;
 
 import GitRepo;
+import INIReader;
 
 immutable string DIR_OVERRIDE = "Override/Lcda";
 immutable string DIR_UNKNOWN = "Override/Unknown";
@@ -68,6 +69,11 @@ void InitDirs(bool bClear)
 
 int main(string[] args)
 {
+    INIReader ir = new INIReader("test.ini");
+    ir.Print();
+    return 0;
+
+
     GitRepo gr = new GitRepo(DIR_REPO);
 
     writeln("Ce script va permettre de stripper et mettre en production le module afin de procéder à une mise à jour du module.");
