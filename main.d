@@ -4,6 +4,7 @@ import std.stdio;
 import std.file;
 import std.regex;
 import std.string;
+import core.sys.windows.windows;
 
 import GitRepo;
 import INIReader;
@@ -84,7 +85,11 @@ int main(string[] args)
     gr.Clear();
 
     if(!gr.Fetch())
+    {
+        writeln("Le programme n'a pas pu récupérer les informations depuis BitBucket !");
+        Sleep(-1);
         return 1;
+    }
 
     writeln("La branche utilisée est : ",gr.GetCurrentBranchName());
     writeln("Voulez vous utiliser une autre branche ? (o/n)");
@@ -118,6 +123,7 @@ int main(string[] args)
         writeln("Quelque chose ne s'est pas passé correctement durant l'installation des fichiers :");
         writeln(sErrs);
     }
+    Sleep(-1);
 	return 0;
 }
 

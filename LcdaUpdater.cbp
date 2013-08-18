@@ -27,6 +27,7 @@
 			</Target>
 		</Build>
 		<Unit filename="GitRepo.d" />
+		<Unit filename="INIReader.d" />
 		<Unit filename="main.d" />
 		<Extensions>
 			<DoxyBlocks>
