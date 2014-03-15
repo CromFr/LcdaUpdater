@@ -4,7 +4,8 @@ import std.stdio;
 import std.file;
 import std.regex;
 import std.string;
-import core.sys.windows.windows;
+import std.conv;
+import std.process;
 
 import GitRepo;
 import INIReader;
@@ -17,7 +18,7 @@ string DIR_UNKNOWN;
 
 string GetFileDestination(string sFilePath, ref string sErrors)
 {
-    static auto rgxFile = regex(r"^(.*[/\\])*(.*)(\.([a-zA-Z0-9]+))$");
+    static auto rgxFile = regex(`^\"?(.*[/\\])*(.*)(\.([a-zA-Z0-9]+))\"?$`);
 
     auto results = match(sFilePath, rgxFile);
     if(results)
@@ -68,63 +69,79 @@ void InitDirs(bool bClear)
 
 int main(string[] args)
 {
-    INIReader ir = new INIReader("LcdaUpdater.ini");
-    DIR_REPO = ir.Get("Path", "LcdaDev");
-    DIR_OVERRIDE = ir.Get("Path", "Override");
-    DIR_MODULE = ir.Get("Path", "Module");
-    DIR_UNKNOWN = ir.Get("Path", "Unknown");
-
-    GitRepo gr = new GitRepo(DIR_REPO, ir.Get("Path", "Git"));
-
-    writeln("Ce script va permettre de stripper et mettre en production le module afin de procéder à une mise à jour du module.");
-    writeln("ATTENTION : Si les HAK ou le TLK ont été modifiés, il faudra les mettre à jour manuellement !");
-    writeln();
-    writeln("Appuyez sur [ENTREE] pour continuer...");
-    readln();
-
-    gr.Clear();
-
-    if(!gr.Fetch())
+    try
     {
-        writeln("Le programme n'a pas pu récupérer les informations depuis BitBucket !");
-        Sleep(-1);
-        return 1;
-    }
+        INIReader ir = new INIReader("LcdaUpdater.ini");
+        DIR_REPO = ir.Get("Path", "LcdaDev");
+        DIR_OVERRIDE = ir.Get("Path", "Override");
+        DIR_MODULE = ir.Get("Path", "Module");
+        DIR_UNKNOWN = ir.Get("Path", "Unknown");
 
-    writeln("La branche utilisée est : ",gr.GetCurrentBranchName());
-    writeln("Voulez vous utiliser une autre branche ? (o/n)");
-    string sAns = readln();
-    if(sAns[0]=='o')
-    {
+        GitRepo gr = new GitRepo(DIR_REPO, ir.Get("Path", "Git"));
+
+        version(Windows) system("chcp 65001");
+
+        writeln("Ce script va permettre de stripper et mettre en production le module afin de procéder à une mise à jour du module."w);
+        writeln("ATTENTION : Si les HAK ou le TLK ont été modifiés, il faudra les mettre à jour manuellement !");
+        writeln();
+        writeln("Appuyez sur [ENTREE] pour continuer...");
+        readln();
+
+        gr.Clear();
+
+        if(!gr.Fetch())
+        {
+            writeln("Le programme n'a pas pu récupérer les informations depuis BitBucket !");
+            writeln("Appuyez sur [ENTREE] pour quitter...");
+            readln();
+            return 1;
+        }
+
+        writeln("La branche utilisée est : ",gr.GetCurrentBranchName());
+        writeln("Voulez vous utiliser une autre branche ? (o/n)");
+        string sAns = readln();
+        if(sAns[0]=='o')
+        {
+            do
+            {
+                writeln("Liste des branches :");
+                writeln(gr.GetBranchList());
+                writeln("Branche à utiliser : ");
+                sAns = readln();
+            }while(gr.CheckoutBranch(sAns)==false);
+        }
+
+
         do
         {
-            writeln("Liste des branches :");
-            writeln(gr.GetBranchList());
-            writeln("Branche à utiliser : ");
+            writeln("Procéder à une mise à jour complète ou intelligente? (c/i)");
             sAns = readln();
-        }while(gr.CheckoutBranch(sAns)==false);
+        }while(sAns[0]!='c' && sAns[0]!='i');
+
+        string sErrs;
+        if(sAns[0]=='c')
+            sErrs = CompleteInstall(gr);
+        else
+            sErrs = IntelligentInstall(gr);
+
+        if(sErrs!="")
+        {
+            writeln("Quelque chose ne s'est pas passé correctement durant l'installation des fichiers :");
+            writeln(sErrs);
+        }
+
+        writeln("Mise à jour terminée, vous pouvez rebooter le serveur");
+        writeln("Appuyez sur [ENTREE] pour quitter...");
+        readln();
+    	return 0;
     }
-
-
-    do
+    catch(Exception e)
     {
-        writeln("Procéder à une mise à jour complète ou intelligente? (c/i)");
-        sAns = readln();
-    }while(sAns[0]!='c' && sAns[0]!='i');
-
-    string sErrs;
-    if(sAns[0]=='c')
-        sErrs = CompleteInstall(gr);
-    else
-        sErrs = IntelligentInstall(gr);
-
-    if(sErrs!="")
-    {
-        writeln("Quelque chose ne s'est pas passé correctement durant l'installation des fichiers :");
-        writeln(sErrs);
+        writeln(to!string(e));
+        writeln("Appuyez sur [ENTREE] pour quitter...");
+        readln();
+        return 1;
     }
-    Sleep(-1);
-	return 0;
 }
 
 
@@ -184,44 +201,48 @@ string IntelligentInstall(ref GitRepo gr)
         foreach(diff; diffs)
         {
             string sDestination = GetFileDestination(diff.file, sErrors);
-            if(sDestination!="")
-            {
-                if(diff.type=='M')
-                {//Modified
-                    if(exists(sDestination))
-                    {
-                        writeln("UPDATED : ",diff.file," --> ",sDestination);
-                        copy(diff.file, sDestination);
-                    }
-                    else
-                        sErrors~="'"~sDestination~"' n'existe pas. Le fichier '"~diff.file~"' n'a pas été mis à jour comme prévu\n";
+            try{
+                if(sDestination!="")
+                {
+                    switch(diff.type){
+                        case 'M'://Modified
+                            if(exists(sDestination))
+                            {
+                                writeln("UPDATED : ",diff.file," --> ",sDestination);
+                                copy(diff.file, sDestination);
+                            }
+                            else
+                                sErrors~="'"~sDestination~"' n'existe pas. Le fichier '"~diff.file~"' n'a pas été mis à jour comme prévu\n";
+                            break;
 
-                }
-                else if(diff.type=='A')
-                {//Added
-                    if(!exists(sDestination))
-                    {
-                        writeln("ADDED   : ",diff.file," --> ",sDestination);
-                        copy(diff.file, sDestination);
+                        case 'A'://Added
+                            if(!exists(sDestination))
+                            {
+                                writeln("ADDED   : ",diff.file," --> ",sDestination);
+                                copy(diff.file, sDestination);
+                            }
+                            else
+                                sErrors~="'"~sDestination~"' existe déja. Le fichier '"~diff.file~"' n'a pas été ajouté à l'install comme prévu\n";
+                            break;
+                        case 'D':
+                            if(exists(sDestination))
+                            {
+                                writeln("DELETED : ",sDestination);
+                                remove(sDestination);
+                            }
+                            else
+                                sErrors~="'"~sDestination~"' n'existe pas. Le fichier '"~diff.file~"' n'a pas être supprimé de l'install comme prévu\n";
+                            break;
+                        default:
+                            sErrors~="L'action '"~diff.type~"' pour le fichier '"~diff.file~"' n'est pas gérée\n";
+                            break;
                     }
-                    else
-                        sErrors~="'"~sDestination~"' existe déja. Le fichier '"~diff.file~"' n'a pas été ajouté à l'install comme prévu\n";
-                }
-                else if(diff.type=='D')
-                {//Deleted
-                    if(exists(sDestination))
-                    {
-                        writeln("DELETED : ",sDestination);
-                        remove(sDestination);
-                    }
-                    else
-                        sErrors~="'"~sDestination~"' n'existe pas. Le fichier '"~diff.file~"' n'a pas être supprimé de l'install comme prévu\n";
                 }
                 else
-                    sErrors~="L'action '"~diff.type~"' pour le fichier '"~diff.file~"' n'est pas gérée\n";
+                    writeln("STRIPPED: ",diff.file);
+            }catch(Exception e){
+                sErrors~="EXCEPTION: "~to!string(e)~"\n";
             }
-            else
-                writeln("STRIPPED: ",diff.file);
         }
         std.file.write(DIR_MODULE~"/InstalledCommit.txt", sToCommit);
     }
