@@ -8,29 +8,29 @@ import std.regex;
 class GitRepo
 {
 public:
-    this(string sRepositoryPath, string sGitPath)
+    this(string sRepositoryPath, string sGitCmd)
     {
         m_sDir=sRepositoryPath;
-        m_sGitPath = sGitPath;
+        m_sGitCmd = sGitCmd;
     }
 
     string GetLatestOriginCommitHash()
     {
-        return ExecuteGitCommand("git rev-parse origin/"~GetCurrentBranchName(), true).output;
+        return ExecuteGitCommand("rev-parse origin/"~GetCurrentBranchName(), true).output;
     }
     string GetLocalCommitHash()
     {
-        return ExecuteGitCommand("git rev-parse "~GetCurrentBranchName(), true).output;
+        return ExecuteGitCommand("rev-parse "~GetCurrentBranchName(), true).output;
     }
 
     string GetCurrentBranchName()
     {
-        return ExecuteGitCommand("git rev-parse --abbrev-ref HEAD", true).output;
+        return ExecuteGitCommand("rev-parse --abbrev-ref HEAD", true).output;
     }
 
     string GetBranchList()
     {
-        return ExecuteGitCommand("git branch -a", true).output;
+        return ExecuteGitCommand("branch -a", true).output;
     }
 
 
@@ -45,7 +45,7 @@ public:
         static auto rgxDiff = regex(r"^([MADRCU])\s+(.+)$");
         Diff[] ret;
 
-        string sResult = ExecuteGitCommand("git diff --name-status "~sFromCommitHash~" "~sToCommitHash).output;
+        string sResult = ExecuteGitCommand("diff --name-status "~sFromCommitHash~" "~sToCommitHash).output;
         foreach(string line ; sResult.splitLines)
         {
             auto results = match(line, rgxDiff);
@@ -61,28 +61,29 @@ public:
 
     bool Fetch()
     {
-        return ExecuteGitCommand("git fetch origin -a", true).status==0;
+        return ExecuteGitCommand("fetch origin -a", true).status==0;
     }
 
     void Clear()
     {
-        ExecuteGitCommand("git reset --hard HEAD", true);
-        ExecuteGitCommand("git clean -f", true);
+        ExecuteGitCommand("reset --hard HEAD", true);
+        ExecuteGitCommand("clean -f", true);
     }
 
     bool Upgrade()
     {
-        return ExecuteGitCommand("git pull origin "~GetCurrentBranchName()).status==0;
+        return ExecuteGitCommand("pull origin "~GetCurrentBranchName()).status==0;
     }
 
     bool CheckoutBranch(string sBranchName)
     {
-        return ExecuteGitCommand("git checkout "~sBranchName).status==0;
+        return ExecuteGitCommand("checkout "~sBranchName).status==0;
     }
 
 
 
 private:
+    string m_sGitCmd;
     string m_sDir;
     string m_sGitPath;
 
@@ -91,9 +92,9 @@ private:
         string sDir = getcwd();
         chdir(m_sDir);
 
-        writeln(">",sCmd);
+        writeln(">",m_sGitCmd," ",sCmd);
         string[] command = split(sCmd);
-        command[0] = m_sGitPath~command[0];
+        command = m_sGitCmd~command;
         auto cmdout = execute(command);
 
         chdir(sDir);
