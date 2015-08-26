@@ -29,7 +29,7 @@ string GetFileDestination(string sFilePath, ref string sErrors)
         string sExtension = results.captures[4];
         switch(sExtension.toLower())
         {
-            case "are","dlg","fac","git","jrl","ncs","nss","ndb","trx","ult","upe","utc","utd","ute","uti","utm","utp","utr","utt","utw","xml":
+            case "are","dlg","fac","git","jrl","ncs","nss","ndb","trx","ult","upe","utc","utd","ute","uti","utm","utp","utr","utt","utw","xml","2da":
                 return DIR_OVERRIDE~"/"~sFileName~"."~sExtension;
 
             case "ifo","gff":
@@ -79,7 +79,7 @@ int main(string[] args)
 
         GitRepo gr = new GitRepo(DIR_REPO, ir.Get("Path", "Git"));
 
-        version(Windows) system("chcp 65001");
+        version(Windows) executeShell("chcp 65001");
 
         writeln("Ce script va permettre de stripper et mettre en production le module afin de procéder à une mise à jour du module."w);
         writeln("ATTENTION : Si les HAK ou le TLK ont été modifiés, il faudra les mettre à jour manuellement !");
