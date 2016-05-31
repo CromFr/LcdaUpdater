@@ -33,6 +33,17 @@ public:
         return ExecuteGitCommand("branch -a", true).output;
     }
 
+    void PushDateTag()
+    {
+        import std.string: format;
+        import std.datetime: Clock;
+        immutable datetime = Clock.currTime();
+        immutable tag = format("Online-%04d-%02d-%02d-%02dh%02d",
+            datetime.year,datetime.month,datetime.day,datetime.hour,datetime.minute);
+        ExecuteGitCommand("tag "~tag);
+        ExecuteGitCommand("push origin tag "~tag);
+    }
+
 
     class Diff
     {

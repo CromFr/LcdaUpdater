@@ -27,6 +27,12 @@ string GetFileDestination(string sFilePath, ref string sErrors)
 
         string sFileName = results.captures[2];
         string sExtension = results.captures[4];
+
+        if(    sFileName==".gitignore"
+            || sFileName==".gitattributes"
+            || sFileName=="LcdaDev.sublime-project")
+            return "";
+
         switch(sExtension.toLower())
         {
             case "are","dlg","fac","git","jrl","ncs","nss","ndb","trx","ult","upe","utc","utd","ute","uti","utm","utp","utr","utt","utw","xml","2da":
@@ -124,12 +130,19 @@ int main(string[] args)
         else
             sErrs = IntelligentInstall(gr);
 
+        writeln();
+        writeln("Pushing online tag to origin");
+        gr.PushDateTag();
+
         if(sErrs!="")
         {
-            writeln("Quelque chose ne s'est pas passé correctement durant l'installation des fichiers :");
+            writeln();
+            writeln();
+            writeln("Quelque chose ne s'est pas passé correctement durant l'installation de ces fichiers :");
             writeln(sErrs);
         }
 
+        writeln();
         writeln("Mise à jour terminée, vous pouvez rebooter le serveur");
         writeln("Appuyez sur [ENTREE] pour quitter...");
         readln();
