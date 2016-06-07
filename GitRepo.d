@@ -81,12 +81,7 @@ public:
         ExecuteGitCommand("clean -f", true);
     }
 
-    bool Upgrade()
-    {
-        return ExecuteGitCommand("pull origin "~GetCurrentBranchName()).status==0;
-    }
-
-    bool CheckoutBranch(string sBranchName)
+    bool Upgrade(string sBranchName)
     {
         return ExecuteGitCommand("checkout "~sBranchName).status==0;
     }

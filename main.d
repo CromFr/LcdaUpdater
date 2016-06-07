@@ -103,20 +103,13 @@ int main(string[] args)
             return 1;
         }
 
-        writeln("La branche utilisée est : ",gr.GetCurrentBranchName());
-        writeln("Voulez vous utiliser une autre branche ? (o/n)");
+        auto branch = "origin/master";
+        writeln("Branche à utiliser [",branch,"] : ");
         string sAns = readln();
-        if(sAns[0]=='o')
-        {
-            do
-            {
-                writeln("Liste des branches :");
-                writeln(gr.GetBranchList());
-                writeln("Branche à utiliser : ");
-                sAns = readln();
-            }while(gr.CheckoutBranch(sAns)==false);
+        if(sAns!="\n"){
+            writeln("Selection de la branche : ",branch);
+            branch = sAns;
         }
-
 
         do
         {
@@ -126,9 +119,9 @@ int main(string[] args)
 
         string sErrs;
         if(sAns[0]=='c')
-            sErrs = CompleteInstall(gr);
+            sErrs = CompleteInstall(gr, branch);
         else
-            sErrs = IntelligentInstall(gr);
+            sErrs = IntelligentInstall(gr, branch);
 
         writeln();
         writeln("Pushing online tag to origin");
@@ -158,10 +151,10 @@ int main(string[] args)
 }
 
 
-string CompleteInstall(ref GitRepo gr)
+string CompleteInstall(ref GitRepo gr, string branch)
 {
     string sErrors;
-    if(gr.Upgrade())
+    if(gr.Upgrade(branch))
     {
         writeln("Appuyez sur [ENTREE] pour commencer l'installation...");
         readln();
@@ -189,7 +182,7 @@ string CompleteInstall(ref GitRepo gr)
     return sErrors;
 }
 
-string IntelligentInstall(ref GitRepo gr)
+string IntelligentInstall(ref GitRepo gr, string branch)
 {
     if(!exists(DIR_MODULE~"/InstalledCommit.txt"))
     {
@@ -200,7 +193,7 @@ string IntelligentInstall(ref GitRepo gr)
     string sFromCommit = cast(string)(read(DIR_MODULE~"/InstalledCommit.txt"));
 
     string sErrors;
-    if(gr.Upgrade())
+    if(gr.Upgrade(branch))
     {
         string sToCommit = gr.GetLocalCommitHash();
 
