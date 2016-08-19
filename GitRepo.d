@@ -105,7 +105,7 @@ private:
 
         chdir(sDir);
 
-        if(!bSilent)
+        if(!bSilent || cmdout.status>0)
             writeln(cmdout.output);
 
         return cmdout;
