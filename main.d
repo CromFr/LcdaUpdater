@@ -83,6 +83,9 @@ int main(string[] args)
         DIR_MODULE = ir.Get("Path", "Module");
         DIR_UNKNOWN = ir.Get("Path", "Unknown");
 
+        //Env
+        environment["GIT_SSH"] = ir.Get("Path", "Putty");
+
         GitRepo gr = new GitRepo(DIR_REPO, ir.Get("Path", "Git"));
 
         version(Windows) executeShell("chcp 65001");
